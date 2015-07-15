@@ -1,0 +1,56 @@
+#!/bin/bash
+ 
+set -e
+
+
+# This script extracts a list of SNPs from gzipped .gen files that are split into 23 chromosomes
+# and outputs as a single gzipped .gen file containing all extracted SNPs that it can find
+# To run use the command
+#
+# $ ./extractSnpsGenfiles.sh \
+#		<snplistfile> \
+#		/panfs/panasas01/shared/alspac/alspac_combined_1kg_20140424/chrCHR/alspac_1kg_p1v3_CHR_fixed.gz \
+#		/panfs/panasas01/shared/alspac/alspac_combined_1kg_20140424/chrCHR/alspac_1kg_p1v3_CHR.sample \
+#		<outputfile>
+#
+# where <snplistfile> is a text file with one SNP name per line and <outputfile> is the rootname of the output.
+# e.g if <outputfile> is extractedsnps then it will make two new files - extractedsnps.gz and extractedsnps.sample
+#
+# WARNING!! This script will overwrite existing files called <outputfile>.gz and <outputfile>.sample
+
+ 
+snplistfile=${1}
+genfile=${2}
+samplefile=${3}
+outfile=${4}
+
+touch ${outfile}.gz
+rm ${outfile}.gz
+touch ${outfile}.gz
+
+for i in {1..23}
+do
+	filename1=$(sed -e "s/CHR/$i/g" <<< ${genfile})
+	filename2=$(sed -e "s/CHR/$i/g" <<< ${samplefile})
+	echo ""
+	echo "$filename1"
+	echo "$filename2"
+	echo "${outfile}_${i}"
+	echo ""
+	gtool -S \
+		--g ${filename1} \
+		--s ${filename2} \
+		--inclusion ${snplistfile} \
+		--og ${outfile}_${i} \
+		--os ${outfile}_${i}.sample 
+	echo "$?"
+	if [ -f "${outfile}_${i}.gz" ]; then
+		cat "${outfile}_${i}.gz" >> ${outfile}.gz
+		cp ${outfile}_${i}.sample ${outfile}.sample
+	fi
+done
+
+# gtool -M --g ${genfilelist} --s ${samplefilelist} --og ${outfile} --os ${outfile}.sample
+# gzip ${outfile}
+
+rm ${outfile}_*
